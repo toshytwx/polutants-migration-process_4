@@ -48,15 +48,15 @@ public class Form extends JDialog {
 
         incomingData1.setModel(tuneIncomingDataTables());
         incomingData2.setModel(tuneIncomingDataTables());
-        outData.setModel(tuneOutDataTable());
-        tablesCount = 0;
+        outData.setModel(tuneOutDataTable(fillDataVectors()));
     }
 
-    private TableModel tuneOutDataTable() {
+    private TableModel tuneOutDataTable(ArrayList<Object> objects) {
         DefaultTableModel model = new DefaultTableModel();
+        model.setRowCount(0);
         model.setColumnIdentifiers(getColumnsHeaders());
         for (int i = 0; i < 5; i++) {
-            model.addRow(getRows(tablesCount, i, fillDataVectors()));
+            model.addRow(getRows(tablesCount, i, objects));
         }
         return model;
     }
@@ -261,7 +261,51 @@ public class Form extends JDialog {
     }
 
     private void onCount() {
-        dispose();
+        outData.setModel(tuneOutDataTable(countResults()));
+        JOptionPane.showMessageDialog(this, "За год работы котельной ПДВ составит: " + countGDV() * 3600 * 5760.0 / 1000000 + " т/год", "Result", JOptionPane.PLAIN_MESSAGE);
+    }
+
+    private ArrayList<Object> countResults() {
+        ArrayList<Object> results = new ArrayList<>();
+        results.add(countCm());
+        results.add(countXm());
+        results.add(countUm());
+        results.add(countGDV());
+        results.add(countCm() > countGDV());
+        return results;
+    }
+
+    private Double countGDV() {
+        Double pdk = (Double) incomingData1.getModel().getValueAt(9, 2);
+        Double Cf = (Double) incomingData1.getModel().getValueAt(8, 2);
+        Double height = (Double) incomingData1.getModel().getValueAt(2, 2);
+        Double m = countCoefm();
+        Double volume = (Double) incomingData1.getModel().getValueAt(4, 2);
+        Double deltaT = countDeltaT();
+        Double gdv = (pdk - Cf) * Math.pow(height, 2) / 200 * 1 * m * 1 * 1.0 * Math.pow(volume * deltaT, 1.0 / 3);
+        return gdv;
+    }
+
+    private Double countUm() {
+        Double f = countCoefF();
+        Double Um = countVm() * (1 + 0.12 * Math.sqrt(f));
+        return Um;
+    }
+
+    private Double countXm() {
+        Double height = (Double) incomingData1.getModel().getValueAt(2, 2);
+        Double d = countCoefD();
+        Double Xm = (5.0 - 1 / 4.0) * height * d;
+        return Xm;
+    }
+
+    private Double countCm() {
+        Double M = (Double) incomingData1.getModel().getValueAt(5, 2);
+        Double height = (Double) incomingData1.getModel().getValueAt(2, 2);
+        Double volume = (Double) incomingData1.getModel().getValueAt(4, 2);
+        Double valueToPow = volume * countDeltaT();
+        Double Cm = (200 * M * 1 * countCoefm() * 1 * 1) / (Math.pow(height, 2) * Math.pow(valueToPow, 1.0 / 3));
+        return Cm;
     }
 
     private void onCancel() {
